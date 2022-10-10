@@ -35,7 +35,7 @@ class WoolworthsAustralia implements Driver
 
     public function getName(): string
     {
-        return static::IDENTIFIER;
+        return 'Woolworths Australia';
     }
 
     /**

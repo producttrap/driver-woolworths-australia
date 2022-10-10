@@ -32,7 +32,7 @@ it('can add the WoolworthsAustralia driver to ProductTrap', function () {
 });
 
 it('can call the ProductTrap facade', function () {
-    expect(FacadesProductTrap::driver(WoolworthsAustralia::IDENTIFIER)->getName())->toBe(WoolworthsAustralia::IDENTIFIER);
+    expect(FacadesProductTrap::driver(WoolworthsAustralia::IDENTIFIER)->getName())->toBe('Woolworths Australia');
 });
 
 it('can retrieve the WoolworthsAustralia driver from ProductTrap', function () {
@@ -43,7 +43,7 @@ it('can call `find` on the WoolworthsAustralia driver and handle failed connecti
     getMockWoolworthsAustralia($this->app, '');
 
     $this->app->make(Factory::class)->driver(WoolworthsAustralia::IDENTIFIER)->find('7XX1000');
-})->throws(ApiConnectionFailedException::class, 'The connection to https://woolworths.com.au/shop/productdetails/7XX1000 has failed for the WoolworthsAustralia driver');
+})->throws(ApiConnectionFailedException::class, 'The connection to https://woolworths.com.au/shop/productdetails/7XX1000 has failed for the Woolworths Australia driver');
 
 it('can call `find` on the WoolworthsAustralia driver and handle a successful response', function () {
     $html = file_get_contents(__DIR__.'/../fixtures/successful_response.html');
