@@ -52,11 +52,5 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true,
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../producttrap"
-        }
-    ]
+    "prefer-stable": true
 }
