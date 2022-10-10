@@ -85,7 +85,7 @@ class WoolworthsAustralia implements Driver
         ) : null;
 
         // Currency
-        $currency = Currency::tryFrom($jsonld['offers']['priceCurrency']) ?? Currency::AUD;
+        $currency = Currency::tryFrom($jsonld['offers']['priceCurrency'] ?? null) ?? Currency::AUD;
 
         // Price
         $price = null;
