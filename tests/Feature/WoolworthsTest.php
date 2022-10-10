@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use ProductTrap\Contracts\Factory;
 use ProductTrap\DTOs\Product;
+use ProductTrap\Enums\Currency;
 use ProductTrap\Enums\Status;
 use ProductTrap\Exceptions\ApiConnectionFailedException;
 use ProductTrap\Facades\ProductTrap as FacadesProductTrap;
@@ -63,6 +64,7 @@ it('can call `find` on the WoolworthsAustralia driver and handle a successful re
         ->unitAmount->amount->toBe(95.0)
         ->unitPrice->unitAmount->unit->value->toBe('kg')
         ->unitPrice->unitAmount->amount->toBe(1.0)
+        ->price->currency->toBe(Currency::AUD)
         ->unitPrice->price->amount->toBe(28.42)
         ->brand->name->toBe('John West')
         ->images->toBe([

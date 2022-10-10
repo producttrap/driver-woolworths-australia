@@ -84,6 +84,9 @@ class WoolworthsAustralia implements Driver
             identifier: $brandName,
         ) : null;
 
+        // Currency
+        $currency = Currency::tryFrom($jsonld['offers']['priceCurrency']) ?? Currency::AUD;
+
         // Price
         $price = null;
         $wasPrice = null;
@@ -101,11 +104,9 @@ class WoolworthsAustralia implements Driver
             ? new Price(
                 amount: $price,
                 wasAmount: $wasPrice,
+                currency: $currency,
             )
             : null;
-
-        // Currency
-        $currency = Currency::tryFrom($jsonld['offers']['priceCurrency']) ?? Currency::AUD;
 
         // Images
         $images = [];
@@ -159,6 +160,7 @@ class WoolworthsAustralia implements Driver
             price: $price,
             unitAmount: $unitAmount,
             unitPrice: $unitPrice,
+            currency: $currency,
         );
 
         // URL
@@ -180,7 +182,6 @@ class WoolworthsAustralia implements Driver
             'description' => $description,
             'url' => $url,
             'price' => $price,
-            'currency' => $currency,
             'status' => $status,
             'brand' => $brand,
             'gtin' => $gtin,
