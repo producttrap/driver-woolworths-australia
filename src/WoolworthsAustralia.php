@@ -8,14 +8,13 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Str;
 use ProductTrap\Contracts\Driver;
 use ProductTrap\DTOs\Brand;
-use ProductTrap\DTOs\Currency;
 use ProductTrap\DTOs\Price;
 use ProductTrap\DTOs\Product;
 use ProductTrap\DTOs\Results;
 use ProductTrap\DTOs\UnitAmount;
 use ProductTrap\DTOs\UnitPrice;
+use ProductTrap\Enums\Currency;
 use ProductTrap\Enums\Status;
-use ProductTrap\Enums\Unit;
 use ProductTrap\Exceptions\ProductTrapDriverException;
 use ProductTrap\Traits\DriverCache;
 use ProductTrap\Traits\DriverCrawler;
@@ -106,9 +105,7 @@ class WoolworthsAustralia implements Driver
             : null;
 
         // Currency
-        $currency = new Currency(
-            code: $jsonld['offers']['priceCurrency'] ?? 'AUD',
-        );
+        $currency = Currency::tryFrom($jsonld['offers']['priceCurrency']) ?? Currency::AUD;
 
         // Images
         $images = [];
