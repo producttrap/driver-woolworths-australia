@@ -1,4 +1,4 @@
-# Sample Product | Target Australia - ProductTrap
+# Sample Product
 
 ```
 ProductTrap\DTOs\Product {
