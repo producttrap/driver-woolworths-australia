@@ -175,26 +175,24 @@ class WoolworthsAustralia implements Driver
         $slug = $slugs[0] ?? null;
         $url = 'https://www.woolworths.com.au/shop/productdetails/'.$identifier.'/'.($slug ?? '');
 
-        $product = new Product([
-            'identifier' => $identifier,
-            'sku' => $identifier,
-            'name' => $title,
-            'description' => $description,
-            'url' => $url,
-            'price' => $price,
-            'status' => $status,
-            'brand' => $brand,
-            'gtin' => $gtin,
-            'unitAmount' => $unitAmount,
-            'unitPrice' => $unitPrice,
-            'ingredients' => $ingredients,
-            'images' => $images,
-            'raw' => [
+        return new Product(
+            identifier: $identifier,
+            sku: $identifier,
+            name: $title,
+            description: $description,
+            url: $url,
+            price: $price,
+            status: $status,
+            brand: $brand,
+            gtin: $gtin,
+            unitAmount: $unitAmount,
+            unitPrice: $unitPrice,
+            ingredients: $ingredients,
+            images: $images,
+            raw: [
                 'html' => $html,
             ],
-        ]);
-
-        return $product;
+        );
     }
 
     public function url(string $identifier): string
