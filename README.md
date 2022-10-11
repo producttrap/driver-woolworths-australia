@@ -23,7 +23,7 @@ composer require producttrap/driver-woolworths-australia
 use ProductTrap\ProductTrap;
 
 /** @var ProductTrap $productTrap */
-$woolworths = $productTrap->driver('woolworths');
+$woolworths = $productTrap->driver('woolworths_australia');
 
 $details = $woolworths->find('ABC123');
 echo $details->unitPrice->format(); // $24.56 / 1KG
