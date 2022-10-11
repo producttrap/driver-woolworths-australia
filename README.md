@@ -26,7 +26,7 @@ use ProductTrap\ProductTrap;
 $woolworths = $productTrap->driver('woolworths_australia');
 
 $details = $woolworths->find('ABC123');
-echo $details->unitPrice->format(); // $24.56 / 1KG
+echo $details->unitPrice->label(); // $24.56 / 1KG
 ```
 
 ## Change log
