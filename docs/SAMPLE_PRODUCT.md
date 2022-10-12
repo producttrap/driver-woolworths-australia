@@ -2,20 +2,20 @@
 
 ```
 ProductTrap\DTOs\Product {
-  +identifier: "829144"
+  +identifier: "257360"
   +status: ProductTrap\Enums\Status {
     +name: "Available"
     +value: "available"
   }
-  +sku: "829144"
-  +gtin: "9300617042556"
-  +name: "Cadbury Cherry Ripe Sharepack 12 Pack 180G"
-  +description: "Cadbury Cherry Ripe juicy cherries and coconut in old gold dark chocolate&lt;BR&gt;&lt;BR&gt;12 Cherry Ripe treats perfect for sharing or snacking Enjoy the Big Cherry Taste The ripe juicy cherries and moist coconut smothered in Old Gold rich dark chocolate ensures a unique taste experience Cherry Ripe offers an indulgent and rich treat Also available in a 52g bar and 150g bitesize pouch"
-  +url: "https://www.woolworths.com.au/shop/productdetails/829144/cadbury-cherry-ripe-sharepack"
-  +ingredients: "Sugar, Coconut (Contains Sulphites), Glace Cherries (Cherries, Wheat Glucose Syrup, Colour (163), Sulphites, Acidity Regulator (330)), Wheat Glucose Syrup, Cocoa Mass, Sweetened Condensed Milk, Vegetable Fat, Milk Solids, Cocoa Butter, Cocoa Powder, Gelatine, Invert Sugar, Emulsifiers (Soy Lecithin, 476), Colours (120, 160(c)), Flavours, Mineral Salt (500)."
+  +sku: "257360"
+  +gtin: "9300462348575"
+  +name: "John West Tuna Olive Oil Blend 95G"
+  +description: "Succulent chunk style tuna in an olive oil blend."
+  +url: "https://www.woolworths.com.au/shop/productdetails/257360/john-west-tuna-olive-oil-blend"
+  +ingredients: "Purse seine caught skipjack *tuna* (Katsuwonus pelamis) (65%), water, olive oil (10%), sunflower oil, salt. Contains fish."
   +price: ProductTrap\DTOs\Price {
-    +amount: 2.5
-    +wasAmount: 5.0
+    +amount: 2.7
+    +wasAmount: null
     +saleName: null
     +currency: ProductTrap\Enums\Currency {
       +name: "AUD"
@@ -27,7 +27,7 @@ ProductTrap\DTOs\Product {
       +name: "GRAM"
       +value: "g"
     }
-    +amount: 180.0
+    +amount: 95.0
   }
   +unitPrice: ProductTrap\DTOs\UnitPrice {
     +unitAmount: ProductTrap\DTOs\UnitAmount {
@@ -38,26 +38,28 @@ ProductTrap\DTOs\Product {
       +amount: 1.0
     }
     +price: ProductTrap\DTOs\Price {
-      +amount: 13.9
+      +amount: 28.42
       +wasAmount: null
       +saleName: null
       +currency: null
     }
   }
   +brand: ProductTrap\DTOs\Brand {
-    +identifier: "Cadbury"
-    +name: "Cadbury"
+    +identifier: "John West"
+    +name: "John West"
     +url: null
   }
-  +images: array:2 [
-    0 => "https://cdn0.woolworths.media/content/wowproductimages/large/829144.jpg"
-    1 => "https://cdn0.woolworths.media/content/wowproductimages/large/829144_2.jpg"
+  +images: array:5 [
+    0 => "https://cdn0.woolworths.media/content/wowproductimages/large/257360.jpg"
+    1 => "https://cdn0.woolworths.media/content/wowproductimages/large/257360_1.jpg"
+    2 => "https://cdn0.woolworths.media/content/wowproductimages/large/257360_2.jpg"
+    3 => "https://cdn0.woolworths.media/content/wowproductimages/large/257360_5.jpg"
+    4 => "https://cdn0.woolworths.media/content/wowproductimages/large/257360_6.jpg"
   ]
   +categories: []
   +raw: array:1 [
     "html" => "/* HTML OF PAGE HERE */"
   ]
 }
-
 
 ```

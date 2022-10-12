@@ -49,10 +49,10 @@ it('can call `find` on the WoolworthsAustralia driver and handle a successful re
     $html = file_get_contents(__DIR__.'/../fixtures/successful_response.html');
     getMockWoolworthsAustralia($this->app, $html);
 
-    $data = $this->app->make(Factory::class)->driver(WoolworthsAustralia::IDENTIFIER)->find('257360');
-    unset($data->raw);
+    $product = $this->app->make(Factory::class)->driver(WoolworthsAustralia::IDENTIFIER)->find('257360');
+    writeSampleProduct($product);
 
-    expect($this->app->make(Factory::class)->driver(WoolworthsAustralia::IDENTIFIER)->find('257360'))
+    expect($product)
         ->toBeInstanceOf(Product::class)
         ->identifier->toBe('257360')
         ->status->toEqual(Status::Available)
