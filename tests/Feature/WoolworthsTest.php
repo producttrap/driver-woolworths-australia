@@ -50,7 +50,6 @@ it('can call `find` on the WoolworthsAustralia driver and handle a successful re
     getMockWoolworthsAustralia($this->app, $html);
 
     $product = $this->app->make(Factory::class)->driver(WoolworthsAustralia::IDENTIFIER)->find('257360');
-    writeSampleProduct($product);
 
     expect($product)
         ->toBeInstanceOf(Product::class)

@@ -46,5 +46,5 @@ function writeSampleProduct(Product $product)
 {$string}
 ```
 EOL;
-    file_put_contents(__DIR__ . '/../docs/SAMPLE_PRODUCT.md', $string);
+    file_put_contents(__DIR__.'/../docs/SAMPLE_PRODUCT.md', $string);
 }
