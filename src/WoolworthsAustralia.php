@@ -6,19 +6,24 @@ namespace ProductTrap\WoolworthsAustralia;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Str;
+use ProductTrap\Contracts\BrowserDriver;
 use ProductTrap\Contracts\Driver;
+use ProductTrap\Contracts\RequiresBrowser;
+use ProductTrap\Contracts\RequiresCrawler;
 use ProductTrap\DTOs\Brand;
+use ProductTrap\DTOs\ScrapeResult;
 use ProductTrap\DTOs\Price;
 use ProductTrap\DTOs\Product;
 use ProductTrap\DTOs\UnitAmount;
 use ProductTrap\DTOs\UnitPrice;
 use ProductTrap\Enums\Currency;
 use ProductTrap\Enums\Status;
+use ProductTrap\Exceptions\ApiConnectionFailedException;
 use ProductTrap\Exceptions\ProductTrapDriverException;
 use ProductTrap\Traits\DriverCache;
 use ProductTrap\Traits\DriverCrawler;
 
-class WoolworthsAustralia implements Driver
+class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler
 {
     use DriverCache;
     use DriverCrawler;
@@ -27,9 +32,8 @@ class WoolworthsAustralia implements Driver
 
     public const BASE_URI = 'https://woolworths.com.au';
 
-    public function __construct(CacheRepository $cache)
+    public function __construct(protected CacheRepository $cache, protected BrowserDriver $browser)
     {
-        $this->cache = $cache;
     }
 
     public function getName(): string
@@ -44,8 +48,17 @@ class WoolworthsAustralia implements Driver
      */
     public function find(string $identifier, array $parameters = []): Product
     {
-        $html = $this->remember($identifier, now()->addDay(), fn () => $this->scrape($this->url($identifier)));
-        $crawler = $this->crawl($html);
+        $url = $this->url($identifier);
+
+        /** @var ScrapeResult $result */
+        $result = $this->remember($identifier, now()->addDay(), fn () => $this->browser->crawl($url));
+
+        if (empty($result->result)) {
+            throw new ApiConnectionFailedException($this, $url);
+        }
+
+        // Get the crawler
+        $crawler = $this->crawl($html = $result->result);
 
         // Extract product JSON as possible source of information
         preg_match_all('/<script type="application\/ld\+json">({"@context":"http:\/\/schema\.org",.+)<\/script>/', $crawler->html(), $matches);

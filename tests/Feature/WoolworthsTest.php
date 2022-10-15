@@ -2,29 +2,51 @@
 
 declare(strict_types=1);
 
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Config\Repository;
+use ProductTrap\Browser\Browser;
+use ProductTrap\Contracts\BrowserDriver;
+use ProductTrap\Contracts\BrowserFactory;
 use ProductTrap\Contracts\Factory;
+use ProductTrap\Drivers\NullBrowserDriver;
 use ProductTrap\DTOs\Product;
 use ProductTrap\Enums\Currency;
 use ProductTrap\Enums\Status;
 use ProductTrap\Exceptions\ApiConnectionFailedException;
 use ProductTrap\Facades\ProductTrap as FacadesProductTrap;
-use ProductTrap\ProductTrap;
-use ProductTrap\Spider;
 use ProductTrap\WoolworthsAustralia\WoolworthsAustralia;
 
-function getMockWoolworthsAustralia($app, string $response): void
+function getMockWoolworthsAustralia(Container $app, string $response): void
 {
-    Spider::fake([
+    // Replace with faker
+    $browser = Browser::fake([
         '*' => $response,
     ]);
+
+    /** @var ProductTrap $client */
+    $client = $app->make(Factory::class);
+
+    $client->extend(WoolworthsAustralia::IDENTIFIER, fn () => new WoolworthsAustralia(
+        cache: $app->make('cache.store'),
+        browser: $browser,
+    ));
+}
+
+function useNullAsDefaultBrowser(Container $app) {
+    /** @var Repository $config */
+    $config = $app->make(Repository::class);
+    $config->set('producttrap.browsers.default', 'null');
 }
 
 it('can add the WoolworthsAustralia driver to ProductTrap', function () {
+    useNullAsDefaultBrowser($this->app);
+
     /** @var ProductTrap $client */
     $client = $this->app->make(Factory::class);
 
     $client->extend('woolworths_other', fn () => new WoolworthsAustralia(
         cache: $this->app->make('cache.store'),
+        browser: $this->app->make(BrowserFactory::class)->driver(),
     ));
 
     expect($client)->driver(WoolworthsAustralia::IDENTIFIER)->toBeInstanceOf(WoolworthsAustralia::class)
@@ -32,10 +54,14 @@ it('can add the WoolworthsAustralia driver to ProductTrap', function () {
 });
 
 it('can call the ProductTrap facade', function () {
+    useNullAsDefaultBrowser($this->app);
+
     expect(FacadesProductTrap::driver(WoolworthsAustralia::IDENTIFIER)->getName())->toBe('Woolworths Australia');
 });
 
 it('can retrieve the WoolworthsAustralia driver from ProductTrap', function () {
+    useNullAsDefaultBrowser($this->app);
+
     expect($this->app->make(Factory::class)->driver(WoolworthsAustralia::IDENTIFIER))->toBeInstanceOf(WoolworthsAustralia::class);
 });
 
