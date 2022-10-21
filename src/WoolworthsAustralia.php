@@ -6,14 +6,19 @@ namespace ProductTrap\WoolworthsAustralia;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Str;
+use LDAP\Result;
 use ProductTrap\Contracts\BrowserDriver;
 use ProductTrap\Contracts\Driver;
 use ProductTrap\Contracts\RequiresBrowser;
 use ProductTrap\Contracts\RequiresCrawler;
+use ProductTrap\Contracts\SupportsPagination;
+use ProductTrap\Contracts\SupportsSearches;
 use ProductTrap\DTOs\Brand;
 use ProductTrap\DTOs\ScrapeResult;
 use ProductTrap\DTOs\Price;
 use ProductTrap\DTOs\Product;
+use ProductTrap\DTOs\Query;
+use ProductTrap\DTOs\Results;
 use ProductTrap\DTOs\UnitAmount;
 use ProductTrap\DTOs\UnitPrice;
 use ProductTrap\Enums\Currency;
@@ -23,7 +28,7 @@ use ProductTrap\Exceptions\ProductTrapDriverException;
 use ProductTrap\Traits\DriverCache;
 use ProductTrap\Traits\DriverCrawler;
 
-class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler
+class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler, SupportsSearches, SupportsPagination
 {
     use DriverCache;
     use DriverCrawler;
@@ -31,6 +36,10 @@ class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler
     public const IDENTIFIER = 'woolworths_australia';
 
     public const BASE_URI = 'https://woolworths.com.au';
+
+    protected int $page = 1;
+
+    protected int $lastPage = 1;
 
     public function __construct(protected CacheRepository $cache, protected BrowserDriver $browser)
     {
@@ -210,5 +219,121 @@ class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler
     public function url(string $identifier): string
     {
         return self::BASE_URI.'/shop/productdetails/'.$identifier;
+    }
+
+    public function searchUrl(string $keywords, array $parameters = []): string
+    {
+        return static::BASE_URI . '/shop/search/products?searchTerm=' . urlencode($keywords) . '&pageNumber=' . $this->page;
+    }
+
+    public function search(Query $query, array $parameters = []): Results
+    {
+        $url = $this->searchUrl((string) $query, $parameters);
+
+        /** @var ScrapeResult $result */
+        $result = $this->remember($query->cacheKey(), now()->addDay(), fn () => $this->browser->crawl($url));
+
+        // file_put_contents(__DIR__ . '/searchpage_' . $this->page . '.html', $result->result);
+
+        if (empty($result->result)) {
+            throw new ApiConnectionFailedException($this, $url);
+        }
+
+        // Get the crawler
+        $crawler = $this->crawl($html = $result->result);
+
+        $products = $crawler->filter('.shelfProductTile.tile')->each(fn ($node) => $node);
+
+        $products = array_map(
+            function ($node) {
+                try {
+                    $title = $node->filter('.shelfProductTile-descriptionLink')->first()->text();
+                    $url = static::BASE_URI . $node->filter('.shelfProductTile-descriptionLink')->first()->attr('href');
+                    $identifier = Str::of($url)->after('/shop/productdetails/')->before('/')->toInteger();
+
+                    $priceDollars = Str::of($node->filter('.price .price-dollars')->first()->text())->trim()->toInteger();
+                    $priceCents = Str::of($node->filter('.price .price-cents')->first()->text())->trim()->toInteger();
+                    $price = (float) ($priceDollars . '.' . $priceCents);
+                    $wasPrice = null;
+                    try {
+                        $wasPrice = Str::of($node->filter('.price-was')->first()->text())->trim()->match('/\$(\d+\.\d+)/')->toFloat();
+                    } catch (\Exception $e) {
+                    }
+
+                    $price = new Price(
+                        amount: $price,
+                        wasAmount: $wasPrice,
+                    );
+
+                    $unitPrice = null;
+                    try {
+                        $unitPrice = Str::of($node->filter('.shelfProductTile-cupPrice')->first()->text())->trim();
+                        $unitPrice = UnitPrice::determine(unitPrice: (string) $unitPrice);
+                    } catch (\Exception $e) {
+                    }
+
+                    $images = [];
+                    $images[] = $node->filter('.shelfProductTile-image')->first()->attr('src');
+
+                    $status = Status::Available;
+                } catch (\Exception $e) {
+                    // Probably not a product; maay be a recipe, advert or other non-product
+                    return;
+                }
+
+                return new Product(
+                    name: $title,
+                    url: $url,
+                    sku: $identifier,
+                    identifier: $identifier,
+                    price: $price,
+                    unitPrice: $unitPrice,
+                    images: $images,
+                    status: $status,
+                    raw: [
+                        'html' => $node->html(),
+                    ]
+                );
+            },
+            $products,
+        );
+
+        $products = array_filter($products);
+
+        $page = 1;
+        $lastPage = 1;
+        try {
+            $page = Str::of($crawler->filter('.page-indicator .current-page')->first()->text())->trim()->toInteger();
+            $lastPage = Str::of($crawler->filter('.page-indicator .page-count')->first()->text())->trim()->toInteger();
+        } catch (\Exception $e) {
+        }
+
+        // set page should have already covered this
+        $this->setPage($page)->lastPage = $lastPage;
+
+        return new Results(
+            query: $query,
+            products: $products,
+            raw: [
+                'html' => $html,
+            ],
+        );
+    }
+
+    public function setPage(int $page): self
+    {
+        $this->page = $page;
+
+        return $this;
+    }
+
+    public function page(): int
+    {
+        return $this->page;
+    }
+
+    public function lastPage(): int
+    {
+        return $this->lastPage;
     }
 }

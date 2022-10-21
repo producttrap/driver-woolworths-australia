@@ -10,6 +10,7 @@ use ProductTrap\Contracts\BrowserFactory;
 use ProductTrap\Contracts\Factory;
 use ProductTrap\Drivers\NullBrowserDriver;
 use ProductTrap\DTOs\Product;
+use ProductTrap\DTOs\Query;
 use ProductTrap\Enums\Currency;
 use ProductTrap\Enums\Status;
 use ProductTrap\Exceptions\ApiConnectionFailedException;
@@ -99,4 +100,51 @@ it('can call `find` on the WoolworthsAustralia driver and handle a successful re
             'https://cdn0.woolworths.media/content/wowproductimages/large/257360_5.jpg',
             'https://cdn0.woolworths.media/content/wowproductimages/large/257360_6.jpg',
         ]);
+});
+
+it('can perform a search query for keywords', function () {
+    $responses = [
+        1 => file_get_contents(__DIR__.'/../fixtures/successful_response_search_1.html'),
+        2 => file_get_contents(__DIR__.'/../fixtures/successful_response_search_2.html'),
+        3 => file_get_contents(__DIR__.'/../fixtures/successful_response_search_3.html'),
+        4 => file_get_contents(__DIR__.'/../fixtures/successful_response_search_4.html'),
+    ];
+
+    $query = Query::fromKeywords('tuna');
+    /** @var WoolworthsAustralia $woolworths */
+    $woolworths = $this->app->make(Factory::class)->driver(WoolworthsAustralia::IDENTIFIER);
+
+    $page = 1;
+    // getMockWoolworthsAustralia($this->app, $responses[$page]);
+    $results = $woolworths->setPage($page)->search($query);
+    expect($woolworths)->toBeInstanceOf(WoolworthsAustralia::class)
+        ->page()->toBe($page)
+        ->lastPage()->toBe(4)
+        ->results->toHaveCount(32);
+
+    $page = 2;
+    // getMockWoolworthsAustralia($this->app, $responses[$page]);
+    $results = $woolworths->setPage($page)->search($query);
+    expect($woolworths)->toBeInstanceOf(WoolworthsAustralia::class)
+        ->page()->toBe($page)
+        ->lastPage()->toBe(4)
+        ->results->toHaveCount(32);
+
+    $page = 3;
+    // getMockWoolworthsAustralia($this->app, $responses[$page]);
+    $results = $woolworths->setPage($page)->search($query);
+    expect($woolworths)->toBeInstanceOf(WoolworthsAustralia::class)
+        ->page()->toBe($page)
+        ->lastPage()->toBe(4)
+        ->results->toHaveCount(32);
+
+    $page = 4;
+    // getMockWoolworthsAustralia($this->app, $responses[$page]);
+    $results = $woolworths->setPage($page)->search($query);
+    expect($woolworths)->toBeInstanceOf(WoolworthsAustralia::class)
+        ->page()->toBe($page)
+        ->lastPage()->toBe(4)
+        ->results->toHaveCount(32);
+
+    dd('end', $results->toArray());
 });
