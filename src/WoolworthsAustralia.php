@@ -6,30 +6,44 @@ namespace ProductTrap\WoolworthsAustralia;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Str;
+use LDAP\Result;
+use ProductTrap\Contracts\BrowserDriver;
 use ProductTrap\Contracts\Driver;
+use ProductTrap\Contracts\RequiresBrowser;
+use ProductTrap\Contracts\RequiresCrawler;
+use ProductTrap\Contracts\SupportsPagination;
+use ProductTrap\Contracts\SupportsSearches;
 use ProductTrap\DTOs\Brand;
+use ProductTrap\DTOs\ScrapeResult;
 use ProductTrap\DTOs\Price;
 use ProductTrap\DTOs\Product;
+use ProductTrap\DTOs\Query;
+use ProductTrap\DTOs\Results;
 use ProductTrap\DTOs\UnitAmount;
 use ProductTrap\DTOs\UnitPrice;
 use ProductTrap\Enums\Currency;
 use ProductTrap\Enums\Status;
+use ProductTrap\Exceptions\ApiConnectionFailedException;
 use ProductTrap\Exceptions\ProductTrapDriverException;
 use ProductTrap\Traits\DriverCache;
 use ProductTrap\Traits\DriverCrawler;
+use Symfony\Component\DomCrawler\Crawler;
 
-class WoolworthsAustralia implements Driver
+class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler, SupportsSearches, SupportsPagination
 {
     use DriverCache;
     use DriverCrawler;
 
     public const IDENTIFIER = 'woolworths_australia';
 
-    public const BASE_URI = 'https://woolworths.com.au';
+    public const BASE_URI = 'https://www.woolworths.com.au';
 
-    public function __construct(CacheRepository $cache)
+    protected int $page = 1;
+
+    protected int $lastPage = 1;
+
+    public function __construct(protected CacheRepository $cache, protected BrowserDriver $browser)
     {
-        $this->cache = $cache;
     }
 
     public function getName(): string
@@ -44,8 +58,17 @@ class WoolworthsAustralia implements Driver
      */
     public function find(string $identifier, array $parameters = []): Product
     {
-        $html = $this->remember($identifier, now()->addDay(), fn () => $this->scrape($this->url($identifier)));
-        $crawler = $this->crawl($html);
+        $url = $this->url($identifier);
+
+        /** @var ScrapeResult $result */
+        $result = $this->remember($identifier, now()->addDay(), fn () => $this->browser->crawl($url));
+
+        if (empty($result->result)) {
+            throw new ApiConnectionFailedException($this, $url);
+        }
+
+        // Get the crawler
+        $crawler = $this->crawl($html = $result->result);
 
         // Extract product JSON as possible source of information
         preg_match_all('/<script type="application\/ld\+json">({"@context":"http:\/\/schema\.org",.+)<\/script>/', $crawler->html(), $matches);
@@ -197,5 +220,122 @@ class WoolworthsAustralia implements Driver
     public function url(string $identifier): string
     {
         return self::BASE_URI.'/shop/productdetails/'.$identifier;
+    }
+
+    public function searchUrl(string $keywords, array $parameters = []): string
+    {
+        return static::BASE_URI . '/shop/search/products?searchTerm=' . urlencode($keywords) . '&pageNumber=' . $this->page;
+    }
+
+    public function search(Query $query, array $parameters = []): Results
+    {
+        $url = $this->searchUrl((string) $query, $parameters);
+
+        /** @var ScrapeResult $result */
+        $result = $this->remember($query->cacheKey() . ':page' . $this->page(), now()->addDay(), fn () => $this->browser->crawl($url));
+
+        if (empty($result->result)) {
+            throw new ApiConnectionFailedException($this, $url);
+        }
+
+        // Get the crawler
+        $crawler = $this->crawl($html = $result->result);
+
+        $products = $crawler->filter('.shelfProductTile.tile')->each(fn ($node) => $node);
+
+        $products = array_map(
+            function (Crawler $node) {
+                try {
+                    $title = $node->filter('.shelfProductTile-descriptionLink')->first()->text();
+                    $url = static::BASE_URI . $node->filter('.shelfProductTile-descriptionLink')->first()->attr('href');
+                    $identifier = Str::of($url)->after('/shop/productdetails/')->before('/')->toInteger();
+
+                    try {
+                        $priceDollars = Str::of($node->filter('.price .price-dollars')->first()->text())->trim()->toInteger();
+                        $priceCents = Str::of($node->filter('.price .price-cents')->first()->text())->trim()->toInteger();
+                        $price = (float) ($priceDollars . '.' . $priceCents);
+                        $wasPrice = null;
+
+                        try {
+                            $wasPrice = Str::of($node->filter('.price-was')->first()->text())->trim()->match('/\$(\d+\.\d+)/')->toFloat();
+                        } catch (\Exception $e) {
+                            // no wasPrice is needed
+                        }
+
+                        $price = new Price(
+                            amount: $price,
+                            wasAmount: $wasPrice,
+                        );
+                    } catch (\Exception $e) {
+                        $price = null;
+                    }
+
+                    $unitPrice = null;
+                    try {
+                        $unitPrice = Str::of($node->filter('.shelfProductTile-cupPrice')->first()->text())->trim();
+                        $unitPrice = UnitPrice::determine(unitPrice: (string) $unitPrice);
+                    } catch (\Exception $e) {
+                    }
+
+                    $images = [];
+                    $images[] = $node->filter('.shelfProductTile-image')->first()->attr('src');
+
+                    $status = Status::Available;
+                } catch (\Exception $e) {
+                    // Probably not a product; maay be a recipe, advert or other non-product
+                    return;
+                }
+
+                return new Product(
+                    name: $title,
+                    url: $url,
+                    sku: $identifier,
+                    identifier: $identifier,
+                    price: $price,
+                    unitPrice: $unitPrice,
+                    images: $images,
+                    status: $status,
+                    raw: [
+                        'html' => $node->html(),
+                    ]
+                );
+            },
+            $products,
+        );
+
+        $products = array_filter($products);
+
+        $lastPage = 1;
+        try {
+            $lastPage = Str::of($crawler->filter('.page-indicator .page-count')->first()->text())->trim()->toInteger();
+        } catch (\Exception $e) {
+        }
+
+        $this->lastPage = $lastPage;
+
+        return new Results(
+            query: $query,
+            products: $products,
+            raw: [
+                'html' => $html,
+            ],
+        );
+    }
+
+    public function setPage(int $page): self
+    {
+        $this->page = $page;
+
+        return $this;
+    }
+
+    public function page(): int
+    {
+        return $this->page;
+    }
+
+    public function lastPage(): int
+    {
+        return $this->lastPage;
     }
 }
