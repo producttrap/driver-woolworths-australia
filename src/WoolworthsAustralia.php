@@ -27,6 +27,7 @@ use ProductTrap\Exceptions\ApiConnectionFailedException;
 use ProductTrap\Exceptions\ProductTrapDriverException;
 use ProductTrap\Traits\DriverCache;
 use ProductTrap\Traits\DriverCrawler;
+use Symfony\Component\DomCrawler\Crawler;
 
 class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler, SupportsSearches, SupportsPagination
 {
@@ -35,7 +36,7 @@ class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler, S
 
     public const IDENTIFIER = 'woolworths_australia';
 
-    public const BASE_URI = 'https://woolworths.com.au';
+    public const BASE_URI = 'https://www.woolworths.com.au';
 
     protected int $page = 1;
 
@@ -231,9 +232,7 @@ class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler, S
         $url = $this->searchUrl((string) $query, $parameters);
 
         /** @var ScrapeResult $result */
-        $result = $this->remember($query->cacheKey(), now()->addDay(), fn () => $this->browser->crawl($url));
-
-        // file_put_contents(__DIR__ . '/searchpage_' . $this->page . '.html', $result->result);
+        $result = $this->remember($query->cacheKey() . ':page' . $this->page(), now()->addDay(), fn () => $this->browser->crawl($url));
 
         if (empty($result->result)) {
             throw new ApiConnectionFailedException($this, $url);
@@ -245,25 +244,31 @@ class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler, S
         $products = $crawler->filter('.shelfProductTile.tile')->each(fn ($node) => $node);
 
         $products = array_map(
-            function ($node) {
+            function (Crawler $node) {
                 try {
                     $title = $node->filter('.shelfProductTile-descriptionLink')->first()->text();
                     $url = static::BASE_URI . $node->filter('.shelfProductTile-descriptionLink')->first()->attr('href');
                     $identifier = Str::of($url)->after('/shop/productdetails/')->before('/')->toInteger();
 
-                    $priceDollars = Str::of($node->filter('.price .price-dollars')->first()->text())->trim()->toInteger();
-                    $priceCents = Str::of($node->filter('.price .price-cents')->first()->text())->trim()->toInteger();
-                    $price = (float) ($priceDollars . '.' . $priceCents);
-                    $wasPrice = null;
                     try {
-                        $wasPrice = Str::of($node->filter('.price-was')->first()->text())->trim()->match('/\$(\d+\.\d+)/')->toFloat();
-                    } catch (\Exception $e) {
-                    }
+                        $priceDollars = Str::of($node->filter('.price .price-dollars')->first()->text())->trim()->toInteger();
+                        $priceCents = Str::of($node->filter('.price .price-cents')->first()->text())->trim()->toInteger();
+                        $price = (float) ($priceDollars . '.' . $priceCents);
+                        $wasPrice = null;
 
-                    $price = new Price(
-                        amount: $price,
-                        wasAmount: $wasPrice,
-                    );
+                        try {
+                            $wasPrice = Str::of($node->filter('.price-was')->first()->text())->trim()->match('/\$(\d+\.\d+)/')->toFloat();
+                        } catch (\Exception $e) {
+                            // no wasPrice is needed
+                        }
+
+                        $price = new Price(
+                            amount: $price,
+                            wasAmount: $wasPrice,
+                        );
+                    } catch (\Exception $e) {
+                        $price = null;
+                    }
 
                     $unitPrice = null;
                     try {
@@ -300,16 +305,13 @@ class WoolworthsAustralia implements Driver, RequiresBrowser, RequiresCrawler, S
 
         $products = array_filter($products);
 
-        $page = 1;
         $lastPage = 1;
         try {
-            $page = Str::of($crawler->filter('.page-indicator .current-page')->first()->text())->trim()->toInteger();
             $lastPage = Str::of($crawler->filter('.page-indicator .page-count')->first()->text())->trim()->toInteger();
         } catch (\Exception $e) {
         }
 
-        // set page should have already covered this
-        $this->setPage($page)->lastPage = $lastPage;
+        $this->lastPage = $lastPage;
 
         return new Results(
             query: $query,
