@@ -109,7 +109,7 @@ it('can call `find` on the WoolworthsAustralia driver and handle a successful re
         ]);
 });
 
-it('can perform a search query for keywords', function () {
+it('can perform a search query for keywords and traverse all pages', function () {
     $paths = [
         1 => __DIR__.'/../fixtures/successful_response_search_1.html',
         2 => __DIR__.'/../fixtures/successful_response_search_2.html',
@@ -124,8 +124,8 @@ it('can perform a search query for keywords', function () {
         2 => file_get_contents($paths[2]),
         3 => file_get_contents($paths[3]),
         4 => file_get_contents($paths[4]),
-        5 => @file_get_contents($paths[5]),
-        6 => @file_get_contents($paths[6]),
+        5 => file_get_contents($paths[5]),
+        6 => file_get_contents($paths[6]),
     ];
 
     $query = Query::fromKeywords('tuna');
